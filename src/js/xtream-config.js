@@ -158,6 +158,81 @@
         }
     }
 
+    function showCategoryPicker(allCats) {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('categoryPickerOverlay');
+            const container = document.getElementById('catListContainer');
+            const searchBox = document.getElementById('catSearchBox');
+            const countEl = document.getElementById('catSelectionCount');
+            const confirmBtn = document.getElementById('catConfirmBtn');
+
+            // Hide the loader overlay temporarily to show the picker
+            document.getElementById('loaderOverlay').classList.add('hidden');
+
+            container.innerHTML = '';
+            const sorted = allCats.slice().sort((a, b) => a.name.localeCompare(b.name));
+            for (const cat of sorted) {
+                const label = document.createElement('label');
+                label.className = 'checkbox-line cat-item';
+                label.style.cssText = 'display:flex;align-items:center;padding:4px 6px;cursor:pointer;';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = cat.id;
+                cb.dataset.name = cat.name;
+                cb.dataset.catType = cat.type;
+                const span = document.createElement('span');
+                span.className = 'checkbox-label';
+                span.style.marginLeft = '8px';
+                span.textContent = cat.name;
+                const small = document.createElement('small');
+                small.style.opacity = '0.5';
+                small.style.marginLeft = '6px';
+                small.textContent = `(${cat.type})`;
+                span.appendChild(small);
+                label.appendChild(cb);
+                label.appendChild(span);
+                container.appendChild(label);
+            }
+
+            const updateCount = () => {
+                const checked = container.querySelectorAll('input[type="checkbox"]:checked').length;
+                countEl.textContent = `${checked} of ${allCats.length} selected`;
+                confirmBtn.disabled = checked === 0;
+            };
+            updateCount();
+            container.addEventListener('change', updateCount);
+
+            searchBox.value = '';
+            searchBox.addEventListener('input', () => {
+                const q = searchBox.value.toLowerCase();
+                container.querySelectorAll('.cat-item').forEach(el => {
+                    const name = el.querySelector('input').dataset.name.toLowerCase();
+                    el.style.display = name.includes(q) ? '' : 'none';
+                });
+            });
+
+            document.getElementById('catSelectAll').onclick = () => {
+                container.querySelectorAll('.cat-item').forEach(el => {
+                    if (el.style.display !== 'none') el.querySelector('input').checked = true;
+                });
+                updateCount();
+            };
+            document.getElementById('catDeselectAll').onclick = () => {
+                container.querySelectorAll('.cat-item input').forEach(cb => cb.checked = false);
+                updateCount();
+            };
+
+            overlay.classList.remove('hidden');
+
+            confirmBtn.onclick = () => {
+                const ids = [...container.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
+                overlay.classList.add('hidden');
+                document.getElementById('loaderOverlay').classList.remove('hidden');
+                resolve(ids);
+            };
+        });
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -253,6 +328,33 @@
             }
 
 
+            // Fetch categories for picker
+            setProgress(35, 'Fetching categories');
+            let liveCats = [], vodCats = [];
+            try {
+                const liveCatText = await robustFetch(`${base}&action=get_live_categories`, 'live_categories', true);
+                liveCats = JSON.parse(liveCatText);
+                if (!Array.isArray(liveCats)) liveCats = [];
+            } catch (e) { appendDetail(`⚠ Live categories fetch failed: ${e.message}`); }
+            try {
+                const vodCatText = await robustFetch(`${base}&action=get_vod_categories`, 'vod_categories', true);
+                vodCats = JSON.parse(vodCatText);
+                if (!Array.isArray(vodCats)) vodCats = [];
+            } catch (e) { appendDetail(`⚠ VOD categories fetch failed: ${e.message}`); }
+
+            const allCats = [
+                ...liveCats.map(c => ({ id: String(c.category_id), name: c.category_name || String(c.category_id), type: 'live' })),
+                ...vodCats.map(c => ({ id: String(c.category_id), name: c.category_name || String(c.category_id), type: 'vod' }))
+            ];
+            appendDetail(`✔ Categories: ${allCats.length} (${liveCats.length} live, ${vodCats.length} vod)`);
+
+            setProgress(40, 'Select categories');
+            overlaySetMessage('Select the categories you want');
+            const selectedCatIds = await showCategoryPicker(allCats);
+            appendDetail(`✔ Selected ${selectedCatIds.length} of ${allCats.length} categories`);
+            showOverlay(false);
+            overlaySetMessage('Building addon…');
+
             // EPG (non-fatal)
             if (enableEpgInitial) {
                 const epgSourceUrl = (epgMode === 'custom')
@@ -308,6 +410,10 @@
                     ? (epgMode === 'custom' ? 'custom' : 'xtream')
                     : 'disabled'
             };
+
+            if (selectedCatIds.length > 0 && selectedCatIds.length < allCats.length) {
+                config.selectedCategories = selectedCatIds;
+            }
 
             config.instanceId = config.instanceId || uuid();
 

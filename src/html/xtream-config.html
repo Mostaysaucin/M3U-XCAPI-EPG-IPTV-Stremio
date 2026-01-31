@@ -133,6 +133,27 @@
     </div>
 </footer>
 
+<div id="categoryPickerOverlay" class="overlay hidden">
+    <div class="overlay-box" style="max-width:700px;">
+        <header class="overlay-header">
+            <h2>Select Categories</h2>
+            <p class="overlay-sub">Choose which channel categories to include. Fewer = faster on all devices.</p>
+        </header>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <input type="text" id="catSearchBox" placeholder="Search categories..."
+                   style="flex:1;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.9rem;">
+            <button type="button" id="catSelectAll" class="btn tiny ghost">All</button>
+            <button type="button" id="catDeselectAll" class="btn tiny ghost">None</button>
+        </div>
+        <div id="catListContainer" style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--bg);">
+        </div>
+        <p id="catSelectionCount" class="hint" style="margin-top:8px;">0 selected</p>
+        <div class="overlay-actions" style="margin-top:12px;">
+            <button type="button" id="catConfirmBtn" class="btn primary">Confirm Selection</button>
+        </div>
+    </div>
+</div>
+
 <div id="loaderOverlay" class="overlay hidden">
     <div class="overlay-box">
         <header class="overlay-header">

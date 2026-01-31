@@ -643,6 +643,18 @@ async function createAddon(config) {
         const addonInstance = new M3UEPGAddon(config, manifest);
         await addonInstance.loadFromCache();
         await addonInstance.updateData(true);
+
+        // Filter by selected categories if configured
+        if (Array.isArray(config.selectedCategories) && config.selectedCategories.length > 0) {
+            const selectedSet = new Set(config.selectedCategories.map(String));
+            addonInstance.channels = addonInstance.channels.filter(ch => selectedSet.has(String(ch.category_id)));
+            addonInstance.movies = addonInstance.movies.filter(m => selectedSet.has(String(m.category_id)));
+            addonInstance.series = addonInstance.series.filter(s => selectedSet.has(String(s.category_id)));
+            if (config.debug) {
+                console.log(`[DEBUG] Category filter: ${config.selectedCategories.length} categories selected → ${addonInstance.channels.length} channels, ${addonInstance.movies.length} movies, ${addonInstance.series.length} series`);
+            }
+        }
+
         addonInstance.buildGenresInManifest();
 
         builder.defineCatalogHandler(async (args) => {
@@ -669,7 +681,9 @@ async function createAddon(config) {
                     const q = extra.search.toLowerCase();
                     items = items.filter(i => i.name.toLowerCase().includes(q));
                 }
-                const metas = items.slice(0, 200).map(i => addonInstance.generateMetaPreview(i));
+                const skip = parseInt(extra.skip) || 0;
+                const PAGE_SIZE = 100;
+                const metas = items.slice(skip, skip + PAGE_SIZE).map(i => addonInstance.generateMetaPreview(i));
                 if (addonInstance.config.debug) {
                     console.log('[DEBUG] Catalog handler', {
                         type: args.type,

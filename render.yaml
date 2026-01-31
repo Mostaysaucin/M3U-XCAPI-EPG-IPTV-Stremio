@@ -15,4 +15,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: SKIP_VOD
-        value: true
+        value: false
