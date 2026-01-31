@@ -1,7 +1,7 @@
 services:
   - type: web
     runtime: node
-    name: stremio-iptv
+    name: stremio-tv
     plan: free
     buildCommand: npm install
     startCommand: npm start
