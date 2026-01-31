@@ -71,17 +71,18 @@ async function fetchData(addonInstance) {
         // JSON API mode
         const base = `${xtreamUrl}/player_api.php?username=${encodeURIComponent(xtreamUsername)}&password=${encodeURIComponent(xtreamPassword)}`;
         // Fetch streams + category lists in parallel to map category_id -> category_name
-        const [liveResp, vodResp, liveCatsResp, vodCatsResp] = await Promise.all([
+        const skipVod = process.env.SKIP_VOD === 'true';
+        const fetchList = [
             fetch(`${base}&action=get_live_streams`, { timeout: 30000 }),
-            fetch(`${base}&action=get_vod_streams`, { timeout: 30000 }),
+            skipVod ? Promise.resolve(null) : fetch(`${base}&action=get_vod_streams`, { timeout: 30000 }),
             fetch(`${base}&action=get_live_categories`, { timeout: 20000 }).catch(() => null),
-            fetch(`${base}&action=get_vod_categories`, { timeout: 20000 }).catch(() => null)
-        ]);
+            skipVod ? Promise.resolve(null) : fetch(`${base}&action=get_vod_categories`, { timeout: 20000 }).catch(() => null)
+        ];
+        const [liveResp, vodResp, liveCatsResp, vodCatsResp] = await Promise.all(fetchList);
 
         if (!liveResp.ok) throw new Error('Xtream live streams fetch failed');
-        if (!vodResp.ok) throw new Error('Xtream VOD streams fetch failed');
         const live = await liveResp.json();
-        const vod = await vodResp.json();
+        const vod = (!skipVod && vodResp && vodResp.ok) ? await vodResp.json() : [];
 
         let liveCatMap = {};
         let vodCatMap = {};

@@ -14,3 +14,5 @@ services:
         value: 21600000
       - key: NODE_ENV
         value: production
+      - key: SKIP_VOD
+        value: true
