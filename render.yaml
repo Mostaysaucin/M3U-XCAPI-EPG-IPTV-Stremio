@@ -1,0 +1,16 @@
+services:
+  - type: web
+    runtime: node
+    name: stremio-iptv
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 7000
+      - key: CACHE_ENABLED
+        value: true
+      - key: CACHE_TTL_MS
+        value: 21600000
+      - key: NODE_ENV
+        value: production
